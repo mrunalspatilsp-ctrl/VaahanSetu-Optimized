@@ -47,7 +47,14 @@ public final class AllocationModels {
     }
 
     public record TripOutcome(long tripId, long routeId, Long previousBusId, Long proposedBusId,
-                              String type, String reason) {}
+                              String type, int peakDemand, int proposedCapacity, int occupancyPercent,
+                              int unmetDemand, String reason) {
+        /** Convenience constructor for backward compatibility with 6-arg callers. */
+        public TripOutcome(long tripId, long routeId, Long previousBusId, Long proposedBusId,
+                           String type, String reason) {
+            this(tripId, routeId, previousBusId, proposedBusId, type, 0, 0, 0, 0, reason);
+        }
+    }
 
     public record RouteReport(long routeId, String code, String name,
                               Metrics before, Metrics after, List<Long> assignedBusIds) {}

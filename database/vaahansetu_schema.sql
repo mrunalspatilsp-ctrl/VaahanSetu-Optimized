@@ -242,6 +242,8 @@ CREATE TABLE allocation_assignments (
     previous_bus_id           BIGINT                     NULL REFERENCES buses(bus_id)                        ON DELETE SET NULL,
     proposed_bus_id           BIGINT                     NULL REFERENCES buses(bus_id)                        ON DELETE SET NULL,
     assignment_type           allocation_assignment_type NOT NULL,
+    peak_demand               INTEGER                    NULL DEFAULT 0,
+    occupancy_percent         INTEGER                    NULL DEFAULT 0,
     reason                    TEXT                       NULL,
     UNIQUE (allocation_run_id, trip_id)
 );

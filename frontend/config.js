@@ -24,12 +24,14 @@
     }
 
     // 4. Render cloud hosting auto-detection
-    // If the frontend is on Render (e.g. vaahansetu-portal.onrender.com),
-    // target the live backend web service (vaahansetu-api.onrender.com)
+    // If the frontend is on Render (e.g. vaahansetu-optimized-portal.onrender.com),
+    // target the corresponding backend web service (e.g. vaahansetu-optimized-api.onrender.com)
     if (window.location.hostname.endsWith('.onrender.com')) {
         let apiHost = window.location.hostname.replace('-portal', '-api');
         if (!apiHost.includes('-api')) {
-            apiHost = 'vaahansetu-api.onrender.com';
+            apiHost = window.location.hostname.includes('optimized')
+                ? 'vaahansetu-optimized-api.onrender.com'
+                : 'vaahansetu-api.onrender.com';
         }
         window.VAAHAN_API_URL = `https://${apiHost}/api`;
         console.log('[VaahanSetu] Auto-detected Render backend API URL:', window.VAAHAN_API_URL);
@@ -37,5 +39,7 @@
     }
 
     // 5. Default production backend
-    window.VAAHAN_API_URL = 'https://vaahansetu-api.onrender.com/api';
+    window.VAAHAN_API_URL = window.location.hostname.includes('optimized')
+        ? 'https://vaahansetu-optimized-api.onrender.com/api'
+        : 'https://vaahansetu-api.onrender.com/api';
 })();

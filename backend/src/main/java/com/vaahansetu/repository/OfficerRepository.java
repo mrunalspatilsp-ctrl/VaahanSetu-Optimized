@@ -22,6 +22,16 @@ public class OfficerRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    @jakarta.annotation.PostConstruct
+    public void initSchema() {
+        try {
+            jdbcTemplate.execute("ALTER TABLE allocation_assignments ADD COLUMN IF NOT EXISTS peak_demand INTEGER NULL DEFAULT 0");
+            jdbcTemplate.execute("ALTER TABLE allocation_assignments ADD COLUMN IF NOT EXISTS occupancy_percent INTEGER NULL DEFAULT 0");
+        } catch (Exception ignored) {
+            // Safe fallback if table does not exist yet or restricted
+        }
+    }
+
     // ----------------------------------------------------------------
     // Active planning session
     // ----------------------------------------------------------------
@@ -351,13 +361,16 @@ public class OfficerRepository {
                        aa.trip_id                  AS "tripId",
                        r.route_code                AS "routeCode",
                        t.departure_time            AS "departureTime",
+                       t.expected_arrival_time     AS "arrivalTime",
                        aa.previous_bus_id          AS "previousBusId",
                        b_prev.registration_number  AS "previousBusRegistration",
-                       b_prev.capacity             AS "previousCapacity",
+                       COALESCE(b_prev.capacity, 0) AS "previousCapacity",
                        aa.proposed_bus_id          AS "proposedBusId",
                        b_next.registration_number  AS "proposedBusRegistration",
-                       b_next.capacity             AS "proposedCapacity",
+                       COALESCE(b_next.capacity, 0) AS "proposedCapacity",
                        aa.assignment_type::text    AS "assignmentType",
+                       COALESCE(aa.peak_demand, 0) AS "peakDemand",
+                       COALESCE(aa.occupancy_percent, 0) AS "occupancyPercent",
                        aa.reason
                 FROM allocation_assignments aa
                 JOIN scheduled_trips t ON t.trip_id = aa.trip_id
@@ -531,8 +544,8 @@ public class OfficerRepository {
     public void insertAllocationAssignmentsBatch(long runId, List<com.vaahansetu.allocation.AllocationModels.TripOutcome> outcomes, boolean isBaseline) {
         if (outcomes == null || outcomes.isEmpty()) return;
         String sql = "INSERT INTO allocation_assignments " +
-                "(allocation_run_id, trip_id, previous_bus_id, proposed_bus_id, assignment_type, reason) " +
-                "VALUES (?, ?, ?, ?, ?::allocation_assignment_type, ?)" +
+                "(allocation_run_id, trip_id, previous_bus_id, proposed_bus_id, assignment_type, peak_demand, occupancy_percent, reason) " +
+                "VALUES (?, ?, ?, ?, ?::allocation_assignment_type, ?, ?, ?)" +
                 " ON CONFLICT (allocation_run_id, trip_id) DO NOTHING";
         jdbcTemplate.batchUpdate(sql, new org.springframework.jdbc.core.BatchPreparedStatementSetter() {
             @Override
@@ -546,14 +559,18 @@ public class OfficerRepository {
                     if (o.previousBusId() == null) ps.setNull(4, java.sql.Types.BIGINT);
                     else ps.setLong(4, o.previousBusId());
                     ps.setString(5, o.previousBusId() == null ? "UNASSIGNED" : "UNCHANGED");
-                    ps.setString(6, o.previousBusId() == null ? "No bus assigned." : "Current assignment.");
+                    ps.setInt(6, o.peakDemand());
+                    ps.setInt(7, o.occupancyPercent());
+                    ps.setString(8, o.previousBusId() == null ? "No bus assigned." : "Current assignment.");
                 } else {
                     if (o.previousBusId() == null) ps.setNull(3, java.sql.Types.BIGINT);
                     else ps.setLong(3, o.previousBusId());
                     if (o.proposedBusId() == null) ps.setNull(4, java.sql.Types.BIGINT);
                     else ps.setLong(4, o.proposedBusId());
                     ps.setString(5, o.type());
-                    ps.setString(6, o.reason());
+                    ps.setInt(6, o.peakDemand());
+                    ps.setInt(7, o.occupancyPercent());
+                    ps.setString(8, o.reason());
                 }
             }
             @Override

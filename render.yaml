@@ -1,7 +1,7 @@
 services:
-  # 1. Spring Boot Backend Web Service
+  # 1. Spring Boot Backend Web Service (Optimized)
   - type: web
-    name: vaahansetu-api
+    name: vaahansetu-optimized-api
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
@@ -12,19 +12,19 @@ services:
       - key: SPRING_PROFILES_ACTIVE
         value: default
       - key: SPRING_DATASOURCE_URL
-        value: jdbc:postgresql://ep-rough-mode-azjj7ke6.c-3.ap-southeast-1.aws.neon.tech/vaahansetu?sslmode=require&options=-c%20timezone=UTC
+        sync: false
       - key: SPRING_DATASOURCE_USERNAME
-        value: neondb_owner
+        sync: false
       - key: SPRING_DATASOURCE_PASSWORD
-        value: npg_7lYrOFQjLhg6
+        sync: false
       - key: SPRING_DATASOURCE_HIKARI_MAX_LIFETIME
         value: "60000"
       - key: SPRING_DATASOURCE_HIKARI_KEEPALIVE_TIME
         value: "30000"
 
-  # 2. Static Web Site (Passenger & Admin Portal)
+  # 2. Static Web Site (Passenger & Admin Portal - Optimized)
   - type: web
-    name: vaahansetu-portal
+    name: vaahansetu-optimized-portal
     runtime: static
     rootDir: frontend
     buildCommand: echo "Deploying static assets"

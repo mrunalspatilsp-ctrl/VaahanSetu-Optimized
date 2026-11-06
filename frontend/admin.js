@@ -603,19 +603,31 @@ if (runAllocationBtn) {
             // Section 2: Fleet Availability Cards
             const fa = proposal.fleetAvailability || {};
             const fleetTotal = document.getElementById('fleetTotalCount');
-            if (fleetTotal) fleetTotal.textContent = fa.totalFleet ?? fa.totalFleetBuses ?? state.buses.length;
+            if (fleetTotal) fleetTotal.textContent = fa.totalFleet ?? state.buses.length;
             const fleetAvail = document.getElementById('fleetAvailableCount');
             const availCount = fa.busesEligible ?? fa.availableBuses ?? 0;
             const assignCount = fa.busesAssigned ?? 0;
             if (fleetAvail) fleetAvail.textContent = `${availCount} (${assignCount} assigned)`;
             const fleetResting = document.getElementById('fleetRestingCount');
-            if (fleetResting) fleetResting.textContent = fa.busesUnassigned ?? fa.restingOrConstrainedBuses ?? 0;
+            const unassignedCount = fa.busesUnassigned ?? 0;
+            if (fleetResting) fleetResting.textContent = `${unassignedCount} idle/reserve`;
+            const fleetMaint = document.getElementById('fleetMaintenanceCount');
+            if (fleetMaint) fleetMaint.textContent = `${fa.ineligibleBuses ?? 0} inactive`;
 
             // Section 3: Proposed Bus Assignments Table with Plain-English Explanations
             if (tbody) {
                 if (!proposal.assignments || proposal.assignments.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="7" class="text-center">No assignments generated.</td></tr>';
                 } else {
+                    const formatTimePart = (val) => {
+                        if (!val) return '-';
+                        const s = String(val).trim();
+                        if (s.includes('T')) return s.split('T')[1].substring(0, 5);
+                        if (s.includes(' ')) return s.split(' ')[1].substring(0, 5);
+                        if (s.length >= 5) return s.substring(0, 5);
+                        return s;
+                    };
+
                     tbody.innerHTML = proposal.assignments.map(a => {
                         const isChanged = a.previousBusId !== a.proposedBusId;
                         const changeTag = isChanged 
@@ -625,13 +637,15 @@ if (runAllocationBtn) {
                         const prevReg = a.previousBusRegistration || (a.previousBusId ? 'Bus #' + a.previousBusId : 'None');
                         const propReg = a.proposedBusRegistration || (a.proposedBusId ? 'Bus #' + a.proposedBusId : 'Unassigned');
 
-                        const prevCap = a.baselineCapacity ?? a.previousCapacity ?? 0;
+                        const prevCap = a.previousCapacity ?? a.baselineCapacity ?? 0;
                         const propCap = a.proposedCapacity ?? 0;
-                        const peakD = a.peakDemand ?? a.demand ?? 0;
+                        const peakD = a.peakDemand != null ? a.peakDemand : (a.demand ?? 0);
 
-                        const occPct = propCap > 0 ? Math.round((peakD / propCap) * 100) : 0;
+                        const occPct = a.occupancyPercent != null ? a.occupancyPercent : (propCap > 0 ? Math.round((Math.min(peakD, propCap) / propCap) * 100) : 0);
                         let occBadge = '';
-                        if (occPct > 100) {
+                        if (propCap === 0) {
+                            occBadge = '<span class="status-badge badge-resting">0% (Unassigned)</span>';
+                        } else if (occPct > 100) {
                             occBadge = `<span class="status-badge badge-resting">${occPct}% (Over)</span>`;
                         } else if (occPct >= 80) {
                             occBadge = `<span class="status-badge badge-changed">${occPct}%</span>`;
@@ -639,9 +653,12 @@ if (runAllocationBtn) {
                             occBadge = `<span class="status-badge badge-active">${occPct}%</span>`;
                         }
 
-                        const depLabel = a.departureTime ? (a.departureTime.length > 16 ? a.departureTime.substring(11, 16) : a.departureTime) : '-';
-                        const arrLabel = a.arrivalTime ? (a.arrivalTime.length > 16 ? a.arrivalTime.substring(11, 16) : a.arrivalTime) : '-';
+                        const depLabel = formatTimePart(a.departureTime);
+                        const arrLabel = formatTimePart(a.arrivalTime);
                         const explanationText = a.reason || a.explanation || a.outcome || 'Assigned based on passenger demand and fleet availability.';
+
+                        const prevCapStr = prevCap > 0 ? ` (${prevCap}s)` : '';
+                        const propCapStr = propCap > 0 ? ` (${propCap}s)` : '';
 
                         return `
                             <tr>
@@ -652,8 +669,8 @@ if (runAllocationBtn) {
                                 </td>
                                 <td>${depLabel} &rarr; ${arrLabel}</td>
                                 <td><strong>${peakD} pax</strong></td>
-                                <td>${prevReg} (${prevCap}s)</td>
-                                <td><strong>${propReg} (${propCap}s)</strong></td>
+                                <td>${prevReg}${prevCapStr}</td>
+                                <td><strong>${propReg}${propCapStr}</strong></td>
                                 <td>${occBadge}</td>
                                 <td>
                                     <div style="font-size: 12px; line-height: 1.45; color: #1e293b; max-width: 380px;">

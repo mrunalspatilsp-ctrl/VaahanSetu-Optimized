@@ -261,23 +261,63 @@ public class OfficerService {
         response.put("busesAssigned",   result.busesAssigned());
         response.put("busesLeftUnassigned", result.busesLeftUnassigned());
         response.put("tripOutcomes", outcomesToMaps(result.outcomes()));
-        response.put("assignments", repo.findAllocationAssignments(proposedRunId));
+        
+        List<Map<String, Object>> assignments = repo.findAllocationAssignments(proposedRunId);
+        // Build map by tripId from outcomes for fast fallback/enrichment
+        Map<Long, com.vaahansetu.allocation.AllocationModels.TripOutcome> outcomeMap = new HashMap<>();
+        for (com.vaahansetu.allocation.AllocationModels.TripOutcome o : result.outcomes()) {
+            outcomeMap.put(o.tripId(), o);
+        }
+        for (Map<String, Object> a : assignments) {
+            long tid = toLong(a.get("tripId"));
+            com.vaahansetu.allocation.AllocationModels.TripOutcome o = outcomeMap.get(tid);
+            if (o != null) {
+                if (a.get("peakDemand") == null || ((Number) a.get("peakDemand")).intValue() == 0) {
+                    a.put("peakDemand", o.peakDemand());
+                }
+                if (a.get("occupancyPercent") == null || ((Number) a.get("occupancyPercent")).intValue() == 0) {
+                    a.put("occupancyPercent", o.occupancyPercent());
+                }
+                if (a.get("proposedCapacity") == null || ((Number) a.get("proposedCapacity")).intValue() == 0) {
+                    a.put("proposedCapacity", o.proposedCapacity());
+                }
+            }
+        }
+        response.put("assignments", assignments);
         response.put("baselineSegments", repo.findSegmentResults(baselineRunId));
         response.put("proposedSegments", repo.findSegmentResults(proposedRunId));
 
         // Presentation-ready Demand Analysis & Fleet Availability Summaries
+        List<Map<String, Object>> allBuses = repo.findAllBuses();
+        int totalFleet = allBuses.size();
+        int ineligibleCount = 0;
+        int restingCount = 0;
+        for (Map<String, Object> b : allBuses) {
+            String st = String.valueOf(b.get("status"));
+            if (!"ACTIVE".equalsIgnoreCase(st)) {
+                ineligibleCount++;
+            }
+            if (Boolean.FALSE.equals(b.get("available"))) {
+                restingCount++;
+            }
+        }
+
         Map<String, Object> demandAnalysis = new LinkedHashMap<>();
         demandAnalysis.put("totalDemand", result.afterTotal().demand());
         demandAnalysis.put("accommodatedDemand", result.afterTotal().accommodated());
         demandAnalysis.put("unmetDemand", result.afterTotal().unmet());
+        demandAnalysis.put("baselineUnmetDemand", result.beforeTotal().unmet());
+        demandAnalysis.put("proposedUnmetDemand", result.afterTotal().unmet());
         demandAnalysis.put("routesConsidered", input.routes().size());
         demandAnalysis.put("tripsConsidered", input.trips().size());
 
         Map<String, Object> fleetAvailability = new LinkedHashMap<>();
-        fleetAvailability.put("totalFleet", repo.findAllBuses().size());
+        fleetAvailability.put("totalFleet", totalFleet);
         fleetAvailability.put("busesEligible", result.busesConsidered());
         fleetAvailability.put("busesAssigned", result.busesAssigned());
         fleetAvailability.put("busesUnassigned", result.busesLeftUnassigned());
+        fleetAvailability.put("ineligibleBuses", ineligibleCount);
+        fleetAvailability.put("restingOrConstrainedBuses", restingCount);
 
         response.put("demandAnalysis", demandAnalysis);
         response.put("fleetAvailability", fleetAvailability);
@@ -563,12 +603,17 @@ public class OfficerService {
         List<Map<String, Object>> list = new ArrayList<>();
         for (com.vaahansetu.allocation.AllocationModels.TripOutcome o : outcomes) {
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("tripId",        o.tripId());
-            m.put("routeId",       o.routeId());
-            m.put("previousBusId", o.previousBusId());
-            m.put("proposedBusId", o.proposedBusId());
-            m.put("type",          o.type());
-            m.put("reason",        o.reason());
+            m.put("tripId",           o.tripId());
+            m.put("routeId",          o.routeId());
+            m.put("previousBusId",    o.previousBusId());
+            m.put("proposedBusId",    o.proposedBusId());
+            m.put("type",             o.type());
+            m.put("assignmentType",   o.type());
+            m.put("peakDemand",       o.peakDemand());
+            m.put("proposedCapacity", o.proposedCapacity());
+            m.put("occupancyPercent", o.occupancyPercent());
+            m.put("unmetDemand",      o.unmetDemand());
+            m.put("reason",           o.reason());
             list.add(m);
         }
         return list;
