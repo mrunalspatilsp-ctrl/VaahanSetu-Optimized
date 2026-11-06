@@ -31,13 +31,8 @@
             console.log('[VaahanSetu] Unified Render host detected, using same-origin API:', window.VAAHAN_API_URL);
             return;
         }
-        // If served from a separate static portal, connect to backend API
-        let apiHost = window.location.hostname.replace('-portal', '-api');
-        if (!apiHost.includes('-api')) {
-            apiHost = window.location.hostname.includes('optimized')
-                ? 'vaahansetu-optimized-api.onrender.com'
-                : 'vaahansetu-api.onrender.com';
-        }
+        // If served from a separate static portal, connect to backend API / app
+        let apiHost = window.location.hostname.replace('-portal', '-app');
         window.VAAHAN_API_URL = `https://${apiHost}/api`;
         console.log('[VaahanSetu] Auto-detected Render backend API URL:', window.VAAHAN_API_URL);
         return;
@@ -45,6 +40,6 @@
 
     // 5. Default production backend
     window.VAAHAN_API_URL = window.location.hostname.includes('optimized')
-        ? 'https://vaahansetu-optimized-api.onrender.com/api'
-        : 'https://vaahansetu-api.onrender.com/api';
+        ? 'https://vaahansetu-optimized-app.onrender.com/api'
+        : 'https://vaahansetu-app.onrender.com/api';
 })();
