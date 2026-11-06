@@ -1,3 +1,10 @@
+databases:
+  - name: vaahansetu-db
+    databaseName: vaahansetu
+    user: vaahansetu
+    region: singapore
+    plan: free
+
 services:
   # 1. Full-Stack Web Service (Spring Boot API + Embedded Passenger & Admin Portals)
   - type: web
@@ -12,13 +19,9 @@ services:
       - key: SPRING_PROFILES_ACTIVE
         value: default
       - key: DATABASE_URL
-        sync: false
-      - key: SPRING_DATASOURCE_URL
-        sync: false
-      - key: SPRING_DATASOURCE_USERNAME
-        sync: false
-      - key: SPRING_DATASOURCE_PASSWORD
-        sync: false
+        fromDatabase:
+          name: vaahansetu-db
+          property: connectionString
       - key: SPRING_DATASOURCE_HIKARI_MAX_LIFETIME
         value: "60000"
       - key: SPRING_DATASOURCE_HIKARI_KEEPALIVE_TIME
