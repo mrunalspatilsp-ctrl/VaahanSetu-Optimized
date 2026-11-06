@@ -24,9 +24,14 @@
     }
 
     // 4. Render cloud hosting auto-detection
-    // If the frontend is on Render (e.g. vaahansetu-optimized-portal.onrender.com),
-    // target the corresponding backend web service (e.g. vaahansetu-optimized-api.onrender.com)
     if (window.location.hostname.endsWith('.onrender.com')) {
+        // If served from the unified web service (or any non-portal domain), use same origin
+        if (!window.location.hostname.includes('-portal')) {
+            window.VAAHAN_API_URL = `${window.location.origin}/api`;
+            console.log('[VaahanSetu] Unified Render host detected, using same-origin API:', window.VAAHAN_API_URL);
+            return;
+        }
+        // If served from a separate static portal, connect to backend API
         let apiHost = window.location.hostname.replace('-portal', '-api');
         if (!apiHost.includes('-api')) {
             apiHost = window.location.hostname.includes('optimized')

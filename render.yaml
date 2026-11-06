@@ -1,13 +1,13 @@
 services:
-  # 1. Spring Boot Backend Web Service (Optimized)
+  # 1. Full-Stack Web Service (Spring Boot API + Embedded Passenger & Admin Portals)
   - type: web
-    name: vaahansetu-optimized-api
+    name: vaahansetu-optimized-app
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     region: singapore
     plan: free
-    healthCheckPath: /api/routes
+    healthCheckPath: /health
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: default
@@ -22,7 +22,7 @@ services:
       - key: SPRING_DATASOURCE_HIKARI_KEEPALIVE_TIME
         value: "30000"
 
-  # 2. Static Web Site (Passenger & Admin Portal - Optimized)
+  # 2. Static Web Site (Passenger & Admin Portal CDN)
   - type: web
     name: vaahansetu-optimized-portal
     runtime: static

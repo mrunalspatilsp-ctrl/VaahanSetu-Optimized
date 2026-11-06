@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="VaahanSetu Administration Portal - Fleet Management, Simulation, and Allocation Optimization.">
+    <link rel="stylesheet" href="styles.css">
+    <title>VaahanSetu | Administrator Portal</title>
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-inner">
+            <div class="header-titles">
+                <h1>VaahanSetu Admin Portal</h1>
+                <p>System Administration, Fleet Monitoring, and Allocation Control</p>
+            </div>
+            <div class="header-links">
+                <a href="index.html" class="nav-switch-btn">&larr; Passenger Portal</a>
+                <button id="logoutBtn" class="logout-btn" hidden>Sign Out</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="admin-main">
+
+        <!-- Login Card -->
+        <section id="loginSection" class="admin-card login-card">
+            <h2>Administrator Authentication</h2>
+            <p class="form-description">Enter your administrator credentials to access system controls.</p>
+            <form id="adminLoginForm">
+                <label for="adminUsername">Username</label>
+                <input type="text" id="adminUsername" class="admin-input" value="admin" required autocomplete="username">
+
+                <label for="adminPassword">Password</label>
+                <input type="password" id="adminPassword" class="admin-input" value="admin123" required autocomplete="current-password">
+
+                <button type="submit" class="submit-button" id="loginSubmitBtn">Sign In as Administrator</button>
+            </form>
+            <p id="loginFeedback" class="feedback-msg" aria-live="polite"></p>
+        </section>
+
+        <!-- Authenticated Dashboard -->
+        <div id="adminDashboard" hidden>
+
+            <!-- Metrics Strip -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-label">Active Fleet</span>
+                    <span class="stat-value" id="statBusCount">--</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Configured Routes</span>
+                    <span class="stat-value" id="statRouteCount">--</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Scheduled Departures</span>
+                    <span class="stat-value" id="statTripCount">--</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Service Date</span>
+                    <span class="stat-value" id="statServiceDate">Today</span>
+                </div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <nav class="admin-tabs" role="tablist">
+                <button class="tab-btn active" data-tab="tab-fleet">Fleet &amp; Buses</button>
+                <button class="tab-btn" data-tab="tab-session">Session Planning</button>
+                <button class="tab-btn" data-tab="tab-trips">Scheduled Trips &amp; Demand</button>
+                <button class="tab-btn" data-tab="tab-demand">Demand Management</button>
+                <button class="tab-btn" data-tab="tab-allocations">Allocation Engine</button>
+            </nav>
+
+            <!-- Tab 1: Fleet & Buses -->
+            <section id="tab-fleet" class="tab-content active">
+                <div class="admin-card">
+                    <div class="card-header-flex">
+                        <h3>Fleet Inventory &amp; Rest Windows</h3>
+                        <button class="refresh-btn" id="refreshBusesBtn">&#x21bb; Refresh Fleet</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table" id="busesTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Registration No</th>
+                                    <th>Capacity</th>
+                                    <th>Rest Window</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="5" class="text-center">Loading fleet data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab 1B: Session Planning & Configuration (SRS F4 / U2) -->
+            <section id="tab-session" class="tab-content">
+                <div class="admin-card">
+                    <div class="card-header-flex">
+                        <h3>Planning Session Configuration</h3>
+                        <button class="refresh-btn" id="refreshSessionConfigBtn">&#x21bb; Reload Current Session</button>
+                    </div>
+                    <p class="form-description">
+                        Select active routes and buses allocated for the operational planning session (persisted to session_routes and session_buses).
+                    </p>
+                    <div class="sim-controls-grid">
+                        <div class="sim-box">
+                            <h4>Active Routes for Session</h4>
+                            <div id="sessionRoutesList" class="selection-list">
+                                <p class="text-muted">Loading routes...</p>
+                            </div>
+                        </div>
+                        <div class="sim-box">
+                            <h4>Active Fleet Buses for Session</h4>
+                            <div id="sessionBusesList" class="selection-list">
+                                <p class="text-muted">Loading fleet...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1.5rem;">
+                        <button id="saveSessionConfigBtn" class="action-btn-large primary-btn">&#x2714; Save Session Configuration</button>
+                        <span id="sessionConfigFeedback" class="feedback-msg" style="margin-left: 1rem;" aria-live="polite"></span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab 2: Trips & Demand -->
+            <section id="tab-trips" class="tab-content">
+                <div class="admin-card">
+                    <div class="card-header-flex">
+                        <h3>Scheduled Departures &amp; Bus Assignments</h3>
+                        <div class="controls-row">
+                            <label for="tripDateFilter" class="inline-label">Service Date:</label>
+                            <input type="date" id="tripDateFilter" class="date-input">
+                            <button class="refresh-btn" id="refreshTripsBtn">&#x21bb; Load Trips</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table" id="tripsTable">
+                            <thead>
+                                <tr>
+                                    <th>Trip ID</th>
+                                    <th>Route</th>
+                                    <th>Departure</th>
+                                    <th>Arrival</th>
+                                    <th>Assigned Bus</th>
+                                    <th>Capacity</th>
+                                    <th>Demand</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="8" class="text-center">Click 'Load Trips' to fetch schedule</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Demand Drilldown Modal/Card -->
+                    <div id="tripDemandPanel" class="drilldown-panel" hidden>
+                        <h4>Segment Demand for Selected Trip</h4>
+                        <div id="tripDemandDetails" class="segment-chips"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab 3: Common Demand Management (Replaces artificial 2-min simulation) -->
+            <section id="tab-demand" class="tab-content">
+                <div class="admin-card">
+                    <div class="card-header-flex">
+                        <div>
+                            <h3>Administrative Demand Management (Single Source of Truth)</h3>
+                            <p class="form-description" style="margin-bottom: 0; text-align: left;">
+                                Record authorized operational surges, event spikes, or group reservations into the common passenger demand repository. Changes persist to PostgreSQL and immediately synchronize with Scheduled Departures, the Passenger Portal, and the Allocation Engine.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="sim-controls-grid" style="margin-top: 1.5rem;">
+                        <div class="sim-box">
+                            <h4>Authorized Demand Adjustment</h4>
+                            <label for="demandTripSelect">Target Scheduled Departure</label>
+                            <select id="demandTripSelect" class="admin-input">
+                                <option value="">Select trip</option>
+                            </select>
+
+                            <label for="demandDelta">Demand Adjustment (Signed &plusmn; Passengers)</label>
+                            <input type="number" id="demandDelta" class="admin-input" value="10" min="-100" max="100">
+
+                            <div style="display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap;">
+                                <button type="button" class="refresh-btn quick-delta" data-delta="5">+5 Surge</button>
+                                <button type="button" class="refresh-btn quick-delta" data-delta="10">+10 Rush</button>
+                                <button type="button" class="refresh-btn quick-delta" data-delta="20">+20 Event</button>
+                                <button type="button" class="refresh-btn quick-delta" data-delta="-5">-5 Cancellation</button>
+                            </div>
+
+                            <button id="applyDemandAdjustmentBtn" class="action-btn-large primary-btn" style="width: 100%;">
+                                &#x2714; Save Demand Adjustment to Common Demand
+                            </button>
+                            <p id="demandAdjustmentFeedback" class="feedback-msg" aria-live="polite"></p>
+                        </div>
+
+                        <div class="sim-box">
+                            <h4>Selected Trip Common Demand Breakdown</h4>
+                            <div id="demandLiveBreakdown">
+                                <p class="text-muted">Select a trip on the left to inspect its segment-by-segment passenger bookings, search intents, and admin adjustments.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab 4: Allocation Engine -->
+            <section id="tab-allocations" class="tab-content">
+                <div class="admin-card">
+                    <div class="card-header-flex">
+                        <div>
+                            <h3>Constraint-Aware Fleet Allocation Engine</h3>
+                            <p class="form-description" style="margin-bottom: 0; text-align: left;">
+                                Evaluates peak segment passenger demand against fleet capacities, strictly enforcing 30-minute turnarounds and mandatory driver rest windows.
+                            </p>
+                        </div>
+                        <button id="runAllocationBtn" class="action-btn-large primary-btn">&#x25B6; Run Allocation Engine</button>
+                    </div>
+
+                    <div id="allocationLoading" class="loading-state" hidden>
+                        <p>Computing optimal bus assignments and passenger demand coverage against fleet constraints...</p>
+                    </div>
+
+                    <div id="allocationResultsPanel" hidden>
+
+                        <!-- Presentation Section 1: Passenger Demand Analysis -->
+                        <div style="margin-top: 1.5rem;">
+                            <h4 style="margin-bottom: 0.5rem; color: #0f766e;">1. Passenger Demand Analysis &amp; Impact</h4>
+                            <div class="results-summary-grid">
+                                <div class="summary-metric">
+                                    <span class="metric-label">Allocation Status</span>
+                                    <span class="metric-value badge-proposed" id="allocStatusBadge">PROPOSED</span>
+                                </div>
+                                <div class="summary-metric">
+                                    <span class="metric-label">Trips Evaluated</span>
+                                    <span class="metric-value" id="allocTripsCount">0</span>
+                                </div>
+                                <div class="summary-metric">
+                                    <span class="metric-label">Total Peak Demand</span>
+                                    <span class="metric-value" id="allocTotalDemand">0 pax</span>
+                                </div>
+                                <div class="summary-metric">
+                                    <span class="metric-label">Baseline Unmet</span>
+                                    <span class="metric-value text-danger" id="allocBaselineUnmet">0 pax</span>
+                                </div>
+                                <div class="summary-metric">
+                                    <span class="metric-label">Proposed Unmet</span>
+                                    <span class="metric-value text-success" id="allocProposedUnmet">0 pax</span>
+                                </div>
+                                <div class="summary-metric">
+                                    <span class="metric-label">Demand Accommodated</span>
+                                    <span class="metric-value text-success" id="allocAccommodated">0 pax</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Presentation Section 2: Fleet Availability & Constraints -->
+                        <div style="margin-top: 1rem;">
+                            <h4 style="margin-bottom: 0.5rem; color: #0f766e;">2. Fleet Availability &amp; Eligibility</h4>
+                            <div class="results-summary-grid">
+                                <div class="summary-metric">
+                                    <span class="metric-label">Total Fleet Buses</span>
+                                    <span class="metric-value" id="fleetTotalCount">0</span>
+                                </div>
+                                <div class="summary-metric">
+                                    <span class="metric-label">Active / Eligible</span>
+                                    <span class="metric-value text-success" id="fleetAvailableCount">0</span>
+                                </div>
+                                <div class="summary-metric">
+                                    <span class="metric-label">Active Reserve (Unassigned)</span>
+                                    <span class="metric-value text-muted" id="fleetRestingCount">0</span>
+                                </div>
+                                <div class="summary-metric">
+                                    <span class="metric-label">Maintenance / Ineligible</span>
+                                    <span class="metric-value text-danger" id="fleetMaintenanceCount">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Presentation Section 3: Proposed Bus Assignments & Natural Language Reasons -->
+                        <div style="margin-top: 1.5rem;">
+                            <h4 style="margin-bottom: 0.5rem; color: #0f766e;">3. Proposed Bus Assignments &amp; Decision Logic</h4>
+                            <div class="table-responsive">
+                                <table class="data-table" id="allocationTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Trip ID &amp; Route</th>
+                                            <th>Departure &amp; Arrival</th>
+                                            <th>Peak Demand</th>
+                                            <th>Baseline Bus</th>
+                                            <th>Proposed Bus</th>
+                                            <th>Occupancy</th>
+                                            <th>Decision Explanation</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Presentation Section 4: Operational State Comparison & Approval -->
+                        <div style="margin-top: 1.5rem;">
+                            <h4 style="margin-bottom: 0.5rem; color: #0f766e;">4. Operational Comparison &amp; Execution</h4>
+                            <div class="approval-strip">
+                                <div id="comparisonSummaryText" style="flex: 1;">
+                                    <strong>Operational State Comparison:</strong> Running this allocation eliminates unmet demand and assigns right-sized buses to demand surges.
+                                </div>
+                                <button id="approveAllocationBtn" class="action-btn-large success-btn">&#x2714; Approve &amp; Persist Allocation</button>
+                            </div>
+                            <p id="approvalFeedback" class="feedback-msg" aria-live="polite"></p>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+    </main>
+
+    <footer>
+        <p>© 2026 VaahanSetu Administrator Console | Integrated Public Transit Operations</p>
+    </footer>
+
+    <script src="config.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>

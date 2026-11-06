@@ -1,13 +1,20 @@
 package com.vaahansetu;
 
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.ResponseBody;
 
-@RestController
+@Controller
 public class HomeController {
 
     @GetMapping("/")
     public String home() {
-        return "VaahanSetu backend is running successfully!";
+        return "redirect:/index.html";
+    }
+
+    @GetMapping("/health")
+    @ResponseBody
+    public String health() {
+        return "OK";
     }
 }
